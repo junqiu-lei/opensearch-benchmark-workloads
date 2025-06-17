@@ -12,5 +12,10 @@
     "source-file": "abo_queries.json.bz2",
     "compressed-bytes": 6335918,
     "uncompressed-bytes": 9109124
+  },
+  {
+    "name": "multispanqa",
+    "base-url": "",
+    "source-file": "MultiSpanQA_queries.json"
   }
 ]

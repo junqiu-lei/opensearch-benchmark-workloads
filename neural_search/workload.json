@@ -33,6 +33,16 @@
           "uncompressed-bytes": 1156323739
         }
       ]
+    },
+    {
+      "name": "multispanqa",
+      "base-url": "",
+      "documents": [
+        {
+          "source-file": "/Users/junqiu/dev/parallel-inference/opensearch-benchmark-workloads/neural_search/MultiSpanQA_converted.jsonl",
+          "document-count": 1959
+        }
+      ]
     }
   ],
   "operations": [

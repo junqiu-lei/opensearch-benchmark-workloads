@@ -1,11 +1,17 @@
 {
-  "index_name": "quora-dense-embedding",
+  "index_name": "multispanqa-dense-embedding",
   "index_body": "indices/quora.json",
-  "corpora_name": "quora",
+  "corpora_name": "multispanqa",
   "default_ingest_pipeline": "nlp-default-ingest-pipeline-dense-embedding",
-  "variable_queries": 10000,
+  "variable_queries": 0,
   "warmup_time_period": 5,
   "index_knn": true,
   "k": 100,
-  "ingest_percentage": 100
+  "ingest_percentage": 1,
+  "model_name": "huggingface/sentence-transformers/all-MiniLM-L6-v2",
+  "dimensions": 384,
+  "number_of_replicas": 0,
+  "warmup_iterations": 10,
+  "iterations": 50,
+  "search_clients": 1
 }
