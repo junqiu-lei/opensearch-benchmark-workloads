@@ -1,5 +1,5 @@
 {
-  "name": "semantic-search",
+  "name": "semantic-search-with-semantic-highlight",
   "operation-type": "search",
   "variable-queries": {{variable_queries | default(0)}},
   "param-source": "neural-search-source",
@@ -31,6 +31,14 @@
           }
         }
       }
+    },
+    "highlight": {
+      "fields": {
+        "text": { "type": "semantic" }
+      },
+      "options": {
+        "model_id": "{{highlight_model_id}}"
+      }
     }
     {%- else %}
     "query": {
@@ -46,6 +54,14 @@
           "query_text": "{{query_text}}",
           "model_id": "{{model_id}}"
         }
+      }
+    },
+    "highlight": {
+      "fields": {
+        "text": { "type": "semantic" }
+      },
+      "options": {
+        "model_id": "{{highlight_model_id}}"
       }
     }
     {%- endif %}

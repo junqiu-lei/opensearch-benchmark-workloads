@@ -46,17 +46,39 @@ def inject_model_id(params: dict, model_id_file: str = "model_id.json"):
         model_id = json.load(f).get("model_id")
     params["model_id"] = model_id
 
-def inject_query_text(params: dict):
+def inject_query_text(params: dict, dataset_name: str = "multispanqa"):
     """
-    Injects a random 'query_text' from 'queries.json' in the script directory
+    Injects a random 'query_text' from the appropriate queries file based on dataset name
     into params at '.query_text'.
     """
-    queries_file = os.path.join(script_dir, "queries.json")
+    # Map dataset names to their queries files
+    dataset_to_queries_file = {
+        "multispanqa": "MultiSpanQA_queries.json",
+        "quora": "queries.json",  # For quora dataset (when it's available)
+        "abo": "abo_queries.json"  # For ABO dataset
+    }
+    
+    queries_filename = dataset_to_queries_file.get(dataset_name, "queries.json")
+    queries_file = os.path.join(script_dir, queries_filename)
+    
+    # Check if the file exists, if not try default queries.json
+    if not os.path.exists(queries_file):
+        queries_file = os.path.join(script_dir, "queries.json")
+    
     with open(queries_file, "r") as f:
-        lines = f.read().splitlines()
-        random_line = random.choice(lines)
-        query_obj = json.loads(random_line)
-        params['query_text'] = query_obj.get("text")
+        # Handle different file formats
+        if queries_filename == "MultiSpanQA_queries.json":
+            # MultiSpanQA_queries.json is a JSON array of strings
+            queries_array = json.load(f)
+            query_text = random.choice(queries_array)
+        else:
+            # Other files are JSONL format (one JSON object per line)
+            lines = f.read().splitlines()
+            random_line = random.choice(lines)
+            query_obj = json.loads(random_line)
+            query_text = query_obj.get("text")
+        
+        params['query_text'] = query_text
 
 
 def ingest_pipeline_param_source(workload, params, **kwargs):
@@ -107,17 +129,27 @@ class QueryParamSource:
                 for item in data:
                     if item['name'] == self.dataset_name:
                         source_file = item['source-file']
-                        base_url = item['base-url']
-                        compressed_bytes = item['compressed-bytes']
-                        uncompressed_bytes = item['uncompressed-bytes']
+                        base_url = item.get('base-url', '')
+                        compressed_bytes = item.get('compressed-bytes')
+                        uncompressed_bytes = item.get('uncompressed-bytes')
+                        
+                        # Handle local files that don't need downloading/decompression
+                        if compressed_bytes is None or uncompressed_bytes is None:
+                            # For local files, just check if the source file exists
+                            local_file_path = script_dir + os.sep + source_file
+                            if not os.path.exists(local_file_path):
+                                raise FileNotFoundError(f"Local queries file not found: {local_file_path}")
+                            return
+                        
                         compressed_path = script_dir + os.sep + source_file
                         uncompressed_path = script_dir + os.sep + Path(source_file).stem
-            if not os.path.exists(compressed_path):
-                downloader = Downloader(False, False)
-                downloader.download(base_url, None, compressed_path, compressed_bytes)
-            if not os.path.exists(uncompressed_path):
-                decompressor = Decompressor()
-                decompressor.decompress(compressed_path, uncompressed_path, uncompressed_bytes)
+                        
+                        if not os.path.exists(compressed_path):
+                            downloader = Downloader(False, False)
+                            downloader.download(base_url, None, compressed_path, compressed_bytes)
+                        if not os.path.exists(uncompressed_path):
+                            decompressor = Decompressor()
+                            decompressor.decompress(compressed_path, uncompressed_path, uncompressed_bytes)
 
     def partition(self, partition_index, total_partitions):
         return self
@@ -134,7 +166,7 @@ class NeuralQueryParamSource(QueryParamSource):
             embedding_query = get_by_path(params, "body.query.neural.text")
         else:
             search_operation_name = params.get('name', None)
-            if search_operation_name == "semantic-search":
+            if search_operation_name == "semantic-search" or search_operation_name == "semantic-search-with-semantic-highlight":
                 query_name = "neural"
             elif search_operation_name == "sparse-search":
                 query_name = "neural_sparse"
@@ -161,7 +193,7 @@ class NeuralQueryParamSource(QueryParamSource):
             inject_model_id(embedding_query)
 
         if params.get("variable-queries", 0) > 0:
-            inject_query_text(embedding_query)
+            inject_query_text(embedding_query, self.dataset_name)
 
         return params
 
